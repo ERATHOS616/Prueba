@@ -6,8 +6,7 @@ class Producto:
         self.precio = precio
         self.cantidad = cantidad
     
-    def get_nombre(self):
-        return self.nombre
+
     
     def get_categoria(self):
         return self.categoria
