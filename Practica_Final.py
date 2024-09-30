@@ -1,154 +1,73 @@
-class Producto:
-    def __init__(self, nombre, categoria, precio, cantidad):
-        self.__nombre = nombre
-        self.__categoria = categoria
-        self.__precio = precio
-        self.__cantidad = cantidad
+import subprocess
+import os
+import unittest
+import importlib.util
 
-    # Getters
-    def get_nombre(self):
-        return self.__nombre
+# URL del repositorio del alumno en GitHub
+github_url = "https://github.com/ERATHOS616/Prueba"
+local_repo_path = "repositorio_alumno"
 
-    def get_categoria(self):
-        return self.__categoria
+# Paso 1: Clonar el repositorio desde GitHub
+def clonar_repositorio(url, ruta_destino):
+    """Clona el repositorio desde GitHub en la ruta especificada."""
+    if os.path.exists(ruta_destino):
+        print(f"El repositorio ya existe en {ruta_destino}. Eliminando...")
+        subprocess.call(['rm', '-rf', ruta_destino])  # Eliminar carpeta si ya existe
+    print(f"Clonando el repositorio desde {url}...")
+    subprocess.call(['git', 'clone', url, ruta_destino])
+    print(f"Repositorio clonado en {ruta_destino}.")
 
-    def get_precio(self):
-        return self.__precio
+# Paso 2: Buscar archivos .py en el repositorio clonado
+def encontrar_scripts_python(ruta):
+    """Busca archivos .py en el repositorio clonado."""
+    scripts = []
+    for root, dirs, files in os.walk(ruta):
+        for file in files:
+            if file.endswith(".py"):
+                scripts.append(os.path.join(root, file))
+    return scripts
 
-    def get_cantidad(self):
-        return self.__cantidad
+# Paso 3: Ejecutar las pruebas de los scripts de Python del alumno
+def corregir_script(script_path):
+    """Carga el script del alumno y ejecuta las pruebas definidas."""
+    print(f"\n--- Corrigiendo {script_path} ---")
+    
+    # Cargar el script del alumno dinámicamente
+    spec = importlib.util.spec_from_file_location("alumno_script", script_path)
+    alumno_script = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(alumno_script)
+    
+    # Definir las pruebas automáticas que se aplicarán al script del alumno
+    class TestProducto(unittest.TestCase):
+        def test_clase_producto(self):
+            Producto = getattr(alumno_script, 'Producto', None)
+            self.assertIsNotNone(Producto, "La clase 'Producto' no está definida correctamente.")
+        
+        def test_clase_inventario(self):
+            Inventario = getattr(alumno_script, 'Inventario', None)
+            self.assertIsNotNone(Inventario, "La clase 'Inventario' no está definida correctamente.")
 
-    # Setters
-    def set_precio(self, precio):
-        if precio > 0:
-            self.__precio = precio
-        else:
-            raise ValueError("El precio debe ser mayor que 0")
-
-    def set_cantidad(self, cantidad):
-        if cantidad >= 0:
-            self.__cantidad = cantidad
-        else:
-            raise ValueError("La cantidad debe ser mayor o igual que 0")
-
-    # Representación en texto del producto
-    def __str__(self):
-        return f"Categoría: {self.__categoria}, Precio: {self.__precio}, Cantidad: {self.__cantidad}"
-
-
-class Inventario:
-    def __init__(self):
-        self.__productos = []
-
-    # Agregar un nuevo producto al inventario
-    def agregar_producto(self, producto):
-        for p in self.__productos:
-            if p.get_nombre() == producto.get_nombre():
-                raise ValueError("El producto ya existe en el inventario")
-        self.__productos.append(producto)
-
-    # Actualizar el precio o cantidad de un producto existente
-    def actualizar_producto(self, nombre, nuevo_precio=None, nueva_cantidad=None):
-        for p in self.__productos:
-            if p.get_nombre() == nombre:
-                if nuevo_precio is not None:
-                    p.set_precio(nuevo_precio)
-                if nueva_cantidad is not None:
-                    p.set_cantidad(nueva_cantidad)
-                return
-        raise ValueError("Producto no encontrado")
-
-    # Eliminar un producto del inventario
-    def eliminar_producto(self, nombre):
-        for p in self.__productos:
-            if p.get_nombre() == nombre:
-                self.__productos.remove(p)
-                return
-        raise ValueError("Producto no encontrado")
-
-    # Mostrar todos los productos del inventario
-    def mostrar_inventario(self):
-        if not self.__productos:
-            print("El inventario está vacío.")
-        for p in self.__productos:
-            print(f"Producto: {p.get_nombre()} - {p}")
-
-    # Buscar un producto por nombre
-    def buscar_producto(self, nombre):
-        for p in self.__productos:
-            if p.get_nombre() == nombre:
-                return p
-        raise ValueError("Producto no encontrado")
-
-
-# Función principal para ejecutar la aplicación desde la terminal
-def main():
-    inventario = Inventario()
-
-    while True:
-        print("\n--- Menú de Inventario ---")
-        print("1. Agregar producto")
-        print("2. Actualizar producto")
-        print("3. Eliminar producto")
-        print("4. Mostrar inventario")
-        print("5. Buscar producto")
-        print("6. Salir")
-
-        opcion = input("Seleccione una opción: ")
-
-        if opcion == '1':
-            nombre = input("Ingrese el nombre del producto: ")
-            categoria = input("Ingrese la categoría del producto: ")
-            precio = float(input("Ingrese el precio del producto: "))
-            cantidad = int(input("Ingrese la cantidad en stock: "))
-
-            try:
-                producto = Producto(nombre, categoria, precio, cantidad)
+        def test_agregar_producto(self):
+            """Prueba básica para agregar un producto al inventario."""
+            Inventario = getattr(alumno_script, 'Inventario', None)
+            Producto = getattr(alumno_script, 'Producto', None)
+            if Inventario and Producto:
+                inventario = Inventario()
+                producto = Producto('Laptop', 'Electrónica', 1000, 10)
                 inventario.agregar_producto(producto)
-                print(f"Producto '{nombre}' agregado exitosamente.")
-            except ValueError as e:
-                print(f"Error: {e}")
+                productos = inventario.mostrar_inventario()  # Esto debe devolver algo iterable
+                self.assertIn('Laptop', productos, "No se pudo agregar el producto correctamente.")
+    
+    # Ejecutar las pruebas automáticas
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestProducto)
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(suite)
 
-        elif opcion == '2':
-            nombre = input("Ingrese el nombre del producto a actualizar: ")
-            nuevo_precio = input("Ingrese el nuevo precio (dejar en blanco para no cambiar): ")
-            nueva_cantidad = input("Ingrese la nueva cantidad (dejar en blanco para no cambiar): ")
+# Clonar el repositorio del alumno y corregir los scripts
+clonar_repositorio(github_url, local_repo_path)
+scripts = encontrar_scripts_python(local_repo_path)
 
-            nuevo_precio = float(nuevo_precio) if nuevo_precio else None
-            nueva_cantidad = int(nueva_cantidad) if nueva_cantidad else None
+# Corregir cada uno de los scripts encontrados en el repositorio
+for script in scripts:
+    corregir_script(script)
 
-            try:
-                inventario.actualizar_producto(nombre, nuevo_precio, nueva_cantidad)
-                print(f"Producto '{nombre}' actualizado exitosamente.")
-            except ValueError as e:
-                print(f"Error: {e}")
-
-        elif opcion == '3':
-            nombre = input("Ingrese el nombre del producto a eliminar: ")
-            try:
-                inventario.eliminar_producto(nombre)
-                print(f"Producto '{nombre}' eliminado exitosamente.")
-            except ValueError as e:
-                print(f"Error: {e}")
-
-        elif opcion == '4':
-            inventario.mostrar_inventario()
-
-        elif opcion == '5':
-            nombre = input("Ingrese el nombre del producto a buscar: ")
-            try:
-                producto = inventario.buscar_producto(nombre)
-                print(f"Producto encontrado: {producto}")
-            except ValueError as e:
-                print(f"Error: {e}")
-
-        elif opcion == '6':
-            print("Saliendo del sistema...")
-            break
-
-        else:
-            print("Opción no válida. Por favor, intente de nuevo.")
-
-
-if __name__ == "__main__":
-    main()
